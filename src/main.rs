@@ -1,10 +1,16 @@
-use std::{net::{TcpStream}, io::{self, Write, Read}, time::Duration};
+use std::{
+    io::{self, BufRead, BufReader, Read, Write},
+    net::TcpStream,
+    time::Duration,
+};
+
+use rust_wget::http::{HttpMethod, HttpRequest, HttpResponse, HttpStatus, HttpVersion};
 
 // TODO error handling
 #[derive(Debug, PartialEq)]
 enum Protocol {
     // TODO allow https?
-    Http
+    Http,
 }
 
 #[derive(Debug, PartialEq)]
@@ -19,44 +25,94 @@ impl ParsedUrl {
         let mut parts = url.split('/');
         let protocol_str = parts.next().expect("Invalid url, unable to read protocol");
         let _ = parts.next();
-        let domain_name = parts.next().expect("Invalid url, unable to read domain name").to_string();
+        let domain_name = parts
+            .next()
+            .expect("Invalid url, unable to read domain name")
+            .to_string();
         let path = parts.collect::<Vec<&str>>().join("/");
         let path = format!("/{}", path);
         let protocol = match protocol_str {
             "http:" => Protocol::Http,
             _ => panic!("Unknown protocol {}", protocol_str),
         };
-        ParsedUrl { protocol, domain_name, path  }
+        ParsedUrl {
+            protocol,
+            domain_name,
+            path,
+        }
     }
 }
 
-fn fetch_url(url: &str) -> io::Result<Vec<u8>> {
+fn read_http_line(reader: &mut BufReader<TcpStream>) -> io::Result<String> {
+    let mut line = String::new();
+    reader.read_line(&mut line)?;
+    if let Some('\n') = line.chars().last() {
+        line.pop();
+    }
+    if let Some('\r') = line.chars().last() {
+        line.pop();
+    }
+    Ok(line)
+}
+
+fn fetch_url(url: &str) -> io::Result<HttpResponse> {
     let parsed_url = ParsedUrl::parse(url);
     println!("{:?}", parsed_url);
     assert!(parsed_url.protocol == Protocol::Http);
     let mut socket = TcpStream::connect((&parsed_url.domain_name[..], 80u16))?;
-    // GET / HTTP/1.1
-    // Host: www.google.com
-    // User-Agent: Wget/1.21.3
-    // Accept: */*
-    // Accept-Encoding: identity
-    // Connection: Keep-Alive
-    let request = format!(
-        "GET {} HTTP/1.1\r\nHost: {}\r\nUser-Agent: Wget/1.21.3\r\nAccept: */*\r\nAccept-Encoding: identity\r\nConnection: Keep-Alive\r\n\r\n",
-        &parsed_url.path, &parsed_url.domain_name);
-    println!("------ request start ------\n{}\n------ request end -----", request);
-    socket.write(request.as_bytes())?;
-    let mut buf = Vec::<u8>::new();
+
+    let mut request = HttpRequest::new(HttpMethod::Get, parsed_url.path, HttpVersion::Version1_1);
+    request.add_header("Host", parsed_url.domain_name);
+    request.add_header("User-Agent", "Wget/1.21.3");
+    request.add_header("Accept", "*/*");
+    request.add_header("Accept-Encoding", "identity");
+    request.add_header("Connection", "Keep-Alive");
+
+    let request_serialized = request.serialize();
+    println!(
+        "------ request start ------\n{}\n------ request end -----",
+        String::from_utf8_lossy(&request_serialized)
+    );
+    socket.write(&request_serialized)?;
+
     socket.set_read_timeout(Some(Duration::from_secs(5)))?;
-    match socket.read_to_end(&mut buf) {
-        Ok(_) => (),
-        Err(e) => match e.kind() {
-            io::ErrorKind::TimedOut => println!("Timed out..."),
-            io::ErrorKind::WouldBlock => println!("Would Block..."),
-            _ => return Err(e),
-        }
+
+    let mut socket_reader = BufReader::new(socket);
+
+    let mut response = {
+        let line = read_http_line(&mut socket_reader)?;
+        let mut line_split = line.split(" ");
+
+        let version_str = line_split.next().expect("No Version in response");
+        let version = HttpVersion::try_from(version_str).expect("Unable to determine HTTP version");
+
+        let status_code_str = line_split.next().expect("No status code");
+        let status_code = status_code_str
+            .parse::<HttpStatus>()
+            .expect("Unable to detect status code");
+
+        let status_message = line_split.next().expect("No status message");
+
+        HttpResponse::new(version, status_code, status_message.to_string())
+    };
+
+    loop {
+        let line = read_http_line(&mut socket_reader)?;
+        if line.is_empty() { break; }
+        let mut line_split = line.split(": ");
+        let key = line_split.next().expect("No header key");
+        let value = line_split.next().expect("No header value");
+        response.add_header(key, value);
     }
-    Ok(buf)
+
+    if let Some(len_str) = response.get_header("Content-Length") {
+        let length = len_str.parse::<usize>().expect("Invalid content length");
+        let mut buf = Vec::with_capacity(length);
+        socket_reader.read_exact(&mut buf)?;
+        response.set_data(buf);
+    }
+
+    Ok(response)
 }
 
 fn main() {
@@ -71,9 +127,9 @@ fn main() {
     for url in urls {
         let contents = fetch_url(&url);
         match contents {
-            Ok(data) => {
-                let response = String::from_utf8_lossy(&data);
-                println!("{}", response);
+            Ok(response) => {
+                // let response = String::from_utf8_lossy(&data);
+                println!("{:#?}", response);
             }
             Err(e) => {
                 eprintln!("{:?}", e);
