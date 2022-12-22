@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt};
 
 use super::HttpVersion;
 
@@ -15,19 +15,20 @@ pub enum HttpMethod {
     Patch
 }
 
-impl ToString for HttpMethod {
-    fn to_string(&self) -> String {
-        match self {
-            HttpMethod::Get => "GET".to_string(),
-            HttpMethod::Head => "HEAD".to_string(),
-            HttpMethod::Post => "POST".to_string(),
-            HttpMethod::Put => "PUT".to_string(),
-            HttpMethod::Delete => "DELETE".to_string(),
-            HttpMethod::Connect => "CONNECT".to_string(),
-            HttpMethod::Options => "OPTIONS".to_string(),
-            HttpMethod::Trace => "TRACE".to_string(),
-            HttpMethod::Patch => "PATCH".to_string(),
-        }
+impl fmt::Display for HttpMethod {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let method = match self {
+            HttpMethod::Get => "GET",
+            HttpMethod::Head => "HEAD",
+            HttpMethod::Post => "POST",
+            HttpMethod::Put => "PUT",
+            HttpMethod::Delete => "DELETE",
+            HttpMethod::Connect => "CONNECT",
+            HttpMethod::Options => "OPTIONS",
+            HttpMethod::Trace => "TRACE",
+            HttpMethod::Patch => "PATCH",
+        };
+        write!(f, "{}", method)
     }
 }
 
@@ -50,18 +51,20 @@ impl HttpRequest {
     }
 
     pub fn serialize(&self) -> Vec<u8> {
-        let mut data = format!("{} {} {}\r\n", self.method.to_string(), self.path, self.version.to_string());
-        for (key, value) in &self.headers {
-            data += key;
-            data += ": ";
-            data += value;
-            data += "\r\n"
-        }
-        data += "\r\n\r\n";
-        data.into_bytes()
+        self.to_string().into_bytes()
     }
 
     pub fn add_header<K: Into<String>, V: Into<String>>(&mut self, key: K, value: V) {
         self.headers.insert(key.into(), value.into());
+    }
+}
+
+impl fmt::Display for HttpRequest {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{} {} {}\r\n", self.method, self.path, self.version)?;
+        for (key, value) in &self.headers {
+            write!(f, "{}: {}\r\n", key, value)?;
+        }
+        write!(f, "\r\n")
     }
 }

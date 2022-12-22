@@ -71,11 +71,11 @@ fn fetch_url(url: &str) -> io::Result<HttpResponse> {
     let request_serialized = request.serialize();
     println!(
         "------ request start ------\n{}\n------ request end -----",
-        String::from_utf8_lossy(&request_serialized)
+        request
     );
     socket.write(&request_serialized)?;
 
-    socket.set_read_timeout(Some(Duration::from_secs(5)))?;
+    socket.set_read_timeout(Some(Duration::from_secs(30)))?;
 
     let mut socket_reader = BufReader::new(socket);
 
@@ -107,7 +107,7 @@ fn fetch_url(url: &str) -> io::Result<HttpResponse> {
 
     if let Some(len_str) = response.get_header("Content-Length") {
         let length = len_str.parse::<usize>().expect("Invalid content length");
-        let mut buf = Vec::with_capacity(length);
+        let mut buf = vec![0; length];
         socket_reader.read_exact(&mut buf)?;
         response.set_data(buf);
     }
@@ -128,8 +128,10 @@ fn main() {
         let contents = fetch_url(&url);
         match contents {
             Ok(response) => {
-                // let response = String::from_utf8_lossy(&data);
-                println!("{:#?}", response);
+                println!(
+                    "------ response start ------\n{}\n------ response end -----",
+                    response
+                );
             }
             Err(e) => {
                 eprintln!("{:?}", e);

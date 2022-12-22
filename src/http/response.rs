@@ -1,4 +1,4 @@
-use std::{collections::HashMap, str::FromStr};
+use std::{collections::HashMap, str::FromStr, fmt};
 
 use super::HttpVersion;
 
@@ -19,6 +19,17 @@ impl FromStr for HttpStatus {
             301 => Ok(HttpStatus::MovedPermanently),
             _ => unimplemented!()
         }
+    }
+}
+
+
+impl fmt::Display for HttpStatus {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let code = match self {
+            HttpStatus::Ok => 200u16,
+            HttpStatus::MovedPermanently => 301u16,
+        };
+        write!(f, "{}", code)
     }
 }
 
@@ -54,5 +65,19 @@ impl HttpResponse {
         self.headers.get(k).map(
             |s| &**s
         )
+    }
+
+    pub fn serialize(&self) -> Vec<u8> {
+        self.to_string().into_bytes()
+    }
+}
+
+impl fmt::Display for HttpResponse {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{} {} {}\r\n", self.version.to_string(), self.status_code, self.status_message)?;
+        for (key, value) in &self.headers {
+            write!(f, "{}: {}\r\n", key, value)?;
+        }
+        write!(f, "{}\r\n\r\n", String::from_utf8_lossy(&self.data))
     }
 }
