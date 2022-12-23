@@ -130,6 +130,23 @@ fn fetch_url(url: &str) -> io::Result<HttpResponse> {
         let mut buf = vec![0; length];
         socket_reader.read_exact(&mut buf)?;
         response.set_data(buf);
+    } else if let Some("chunked") = response.get_header("Transfer-Encoding") {
+        let mut data: Vec<u8> = Vec::new();
+        loop {
+            let len_str = read_http_line(&mut socket_reader)?;
+            let length: usize = usize::from_str_radix(&len_str, 16).expect("Invalid chunk length");
+            if length == 0 { break; }
+            let mut chunk = vec![0u8; length]; 
+            socket_reader.read_exact(&mut chunk)?;
+            data.extend( chunk);
+            let mut ending = [0u8, 0u8];
+            socket_reader.read_exact(&mut ending)?;
+            if &ending != b"\r\n" {
+                panic!("Invalid chunk ending");
+            }
+        }
+        response.set_data(data);
+        // TODO parse trailers?
     }
 
     Ok(response)
