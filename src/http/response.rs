@@ -1,11 +1,11 @@
-use std::{collections::HashMap, str::FromStr, fmt};
+use std::{collections::HashMap, fmt, str::FromStr};
 
 use super::HttpVersion;
 
 #[derive(Debug)]
 pub enum HttpStatus {
     Ok,
-    MovedPermanently
+    MovedPermanently,
 }
 
 impl FromStr for HttpStatus {
@@ -13,15 +13,14 @@ impl FromStr for HttpStatus {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let status_code = s.parse::<u16>().or(Err(()))?;
-        
+
         match status_code {
             200 => Ok(HttpStatus::Ok),
             301 => Ok(HttpStatus::MovedPermanently),
-            _ => unimplemented!()
+            _ => unimplemented!(),
         }
     }
 }
-
 
 impl fmt::Display for HttpStatus {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -35,11 +34,11 @@ impl fmt::Display for HttpStatus {
 
 #[derive(Debug)]
 pub struct HttpResponse {
-    version: HttpVersion,
-    status_code: HttpStatus,
-    status_message: String,
+    pub version: HttpVersion,
+    pub status_code: HttpStatus,
+    pub status_message: String,
     headers: HashMap<String, String>,
-    data: Vec<u8>
+    data: Vec<u8>,
 }
 
 impl HttpResponse {
@@ -62,9 +61,7 @@ impl HttpResponse {
     }
 
     pub fn get_header(&self, k: &str) -> Option<&str> {
-        self.headers.get(k).map(
-            |s| &**s
-        )
+        self.headers.get(k).map(|s| &**s)
     }
 
     pub fn serialize(&self) -> Vec<u8> {
@@ -74,7 +71,13 @@ impl HttpResponse {
 
 impl fmt::Display for HttpResponse {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{} {} {}\r\n", self.version.to_string(), self.status_code, self.status_message)?;
+        write!(
+            f,
+            "{} {} {}\r\n",
+            self.version.to_string(),
+            self.status_code,
+            self.status_message
+        )?;
         for (key, value) in &self.headers {
             write!(f, "{}: {}\r\n", key, value)?;
         }

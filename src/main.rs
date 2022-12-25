@@ -44,10 +44,12 @@ impl ParsedUrl {
                 .expect("Invalid url, unable to read domain name")
                 .to_string();
             if let Some(loc) = domain_name_port.rfind(':') {
-
                 let (domain_name, port_str) = domain_name_port.split_at(loc);
                 let port_str = &port_str[1..]; // remove colon
-                (domain_name.to_string(), port_str.parse::<u16>().expect("Invalid port"))
+                (
+                    domain_name.to_string(),
+                    port_str.parse::<u16>().expect("Invalid port"),
+                )
             } else {
                 (domain_name_port, protocol.get_port())
             }
@@ -118,7 +120,9 @@ fn fetch_url(url: &str) -> io::Result<HttpResponse> {
 
     loop {
         let line = read_http_line(&mut socket_reader)?;
-        if line.is_empty() { break; }
+        if line.is_empty() {
+            break;
+        }
         let mut line_split = line.split(": ");
         let key = line_split.next().expect("No header key");
         let value = line_split.next().expect("No header value");
@@ -135,10 +139,12 @@ fn fetch_url(url: &str) -> io::Result<HttpResponse> {
         loop {
             let len_str = read_http_line(&mut socket_reader)?;
             let length: usize = usize::from_str_radix(&len_str, 16).expect("Invalid chunk length");
-            if length == 0 { break; }
-            let mut chunk = vec![0u8; length]; 
+            if length == 0 {
+                break;
+            }
+            let mut chunk = vec![0u8; length];
             socket_reader.read_exact(&mut chunk)?;
-            data.extend( chunk);
+            data.extend(chunk);
             let mut ending = [0u8, 0u8];
             socket_reader.read_exact(&mut ending)?;
             if &ending != b"\r\n" {
@@ -162,17 +168,37 @@ fn main() {
     }
     let mut has_error = false;
     for url in urls {
-        let contents = fetch_url(&url);
-        match contents {
-            Ok(response) => {
-                println!(
-                    "------ response start ------\n{}\n------ response end -----",
-                    response
-                );
-            }
-            Err(e) => {
-                eprintln!("{:?}", e);
-                has_error = true;
+        let mut current_url = url;
+        let mut successful = false;
+        while !successful {
+            let result = fetch_url(&current_url);
+            match result {
+                Ok(response) => {
+                    println!(
+                        "------ response start ------\n{}\n------ response end -----",
+                        response
+                    );
+                    match response.status_code {
+                        HttpStatus::Ok => successful = true,
+                        HttpStatus::MovedPermanently => {
+                            if let Some(new_url) = response.get_header("Location") {
+                                println!(
+                                    "Got {} with Location \"{}\"",
+                                    response.status_code, new_url
+                                );
+                                current_url = new_url.to_string();
+                            } else {
+                                eprintln!("Got {} without a Location!", response.status_code);
+                                break;
+                            }
+                        }
+                    }
+                }
+                Err(e) => {
+                    eprintln!("{:?}", e);
+                    has_error = true;
+                    break;
+                }
             }
         }
     }
