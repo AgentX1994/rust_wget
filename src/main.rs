@@ -65,9 +65,19 @@ fn main() {
     let config = Configuration {
         debug: options.debug,
     };
-    let mut output_file = options
-        .output_file
-        .map(|path| File::create(path).expect("Could not open requested output file!"));
+    let mut output_file = options.output_file.map(|path| {
+        if path == "-" {
+            if config.debug > 0 {
+                println!("Writing to stdout");
+            }
+            Box::new(io::stdout()) as Box<dyn io::Write>
+        } else {
+            if config.debug > 0 {
+                println!("Writing to {}", path);
+            }
+            Box::new(File::create(path).expect("Could not open requested output file!"))
+        }
+    });
     for url in options.urls {
         let mut current_url = url;
         let mut successful = false;
