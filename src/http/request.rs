@@ -12,7 +12,7 @@ pub enum HttpMethod {
     Connect,
     Options,
     Trace,
-    Patch
+    Patch,
 }
 
 impl fmt::Display for HttpMethod {
@@ -46,7 +46,7 @@ impl HttpRequest {
             method,
             path,
             version,
-            headers: HashMap::new()
+            headers: HashMap::new(),
         }
     }
 

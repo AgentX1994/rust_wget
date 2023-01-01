@@ -1,4 +1,9 @@
-use std::{collections::HashMap, fmt, str::FromStr};
+use std::{
+    collections::HashMap,
+    fmt,
+    io::{self, BufRead},
+    str::FromStr,
+};
 
 use super::HttpVersion;
 
@@ -30,6 +35,21 @@ impl fmt::Display for HttpStatus {
         };
         write!(f, "{}", code)
     }
+}
+
+fn read_http_line<S>(reader: &mut S) -> io::Result<String>
+where
+    S: BufRead,
+{
+    let mut line = String::new();
+    reader.read_line(&mut line)?;
+    if let Some('\n') = line.chars().last() {
+        line.pop();
+    }
+    if let Some('\r') = line.chars().last() {
+        line.pop();
+    }
+    Ok(line)
 }
 
 #[derive(Debug)]
@@ -66,6 +86,69 @@ impl HttpResponse {
 
     pub fn serialize(&self) -> Vec<u8> {
         self.to_string().into_bytes()
+    }
+
+    pub fn receive_response<S>(mut socket: &mut S) -> io::Result<Self>
+    where
+        S: BufRead,
+    {
+        let mut response = {
+            let line = read_http_line(&mut socket)?;
+            let mut line_split = line.split(" ");
+
+            let version_str = line_split.next().expect("No Version in response");
+            let version =
+                HttpVersion::try_from(version_str).expect("Unable to determine HTTP version");
+
+            let status_code_str = line_split.next().expect("No status code");
+            let status_code = status_code_str
+                .parse::<HttpStatus>()
+                .expect("Unable to detect status code");
+
+            let status_message = line_split.next().expect("No status message");
+
+            HttpResponse::new(version, status_code, status_message.to_string())
+        };
+
+        loop {
+            let line = read_http_line(&mut socket)?;
+            if line.is_empty() {
+                break;
+            }
+            let mut line_split = line.split(": ");
+            let key = line_split.next().expect("No header key");
+            let value = line_split.next().expect("No header value");
+            response.add_header(key, value);
+        }
+
+        if let Some(len_str) = response.get_header("Content-Length") {
+            let length = len_str.parse::<usize>().expect("Invalid content length");
+            let mut buf = vec![0; length];
+            socket.read_exact(&mut buf)?;
+            response.set_data(buf);
+        } else if let Some("chunked") = response.get_header("Transfer-Encoding") {
+            let mut data: Vec<u8> = Vec::new();
+            loop {
+                let len_str = read_http_line(&mut socket)?;
+                let length: usize =
+                    usize::from_str_radix(&len_str, 16).expect("Invalid chunk length");
+                if length == 0 {
+                    break;
+                }
+                let mut chunk = vec![0u8; length];
+                socket.read_exact(&mut chunk)?;
+                data.extend(chunk);
+                let mut ending = [0u8, 0u8];
+                socket.read_exact(&mut ending)?;
+                if &ending != b"\r\n" {
+                    panic!("Invalid chunk ending");
+                }
+            }
+            response.set_data(data);
+            // TODO parse trailers?
+        }
+
+        Ok(response)
     }
 }
 

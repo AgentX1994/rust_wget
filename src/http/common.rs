@@ -34,3 +34,18 @@ impl fmt::Display for HttpVersion {
         write!(f, "{}", version_str)
     }
 }
+
+// TODO error handling
+#[derive(Debug, PartialEq)]
+pub enum Protocol {
+    // TODO allow https?
+    Http,
+}
+
+impl Protocol {
+    pub fn get_port(&self) -> u16 {
+        match self {
+            Protocol::Http => 80,
+        }
+    }
+}
