@@ -41,10 +41,10 @@ pub struct HttpRequest {
 }
 
 impl HttpRequest {
-    pub fn new(method: HttpMethod, path: String, version: HttpVersion) -> Self {
+    pub fn new<P: Into<String>>(method: HttpMethod, path: P, version: HttpVersion) -> Self {
         HttpRequest {
             method,
-            path,
+            path: path.into(),
             version,
             headers: HashMap::new(),
         }

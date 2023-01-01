@@ -36,7 +36,7 @@ impl fmt::Display for HttpVersion {
 }
 
 // TODO error handling
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Protocol {
     // TODO allow https?
     Http,
@@ -48,4 +48,9 @@ impl Protocol {
             Protocol::Http => 80,
         }
     }
+}
+
+#[derive(Debug, Default)]
+pub struct Configuration {
+    pub debug: u8,
 }

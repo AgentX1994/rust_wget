@@ -1,6 +1,6 @@
 use crate::http::common::Protocol;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct ParsedUrl {
     pub protocol: Protocol,
     pub domain_name: String,
@@ -34,7 +34,7 @@ impl ParsedUrl {
                 (domain_name_port, protocol.get_port())
             }
         };
-        let path = parts.collect::<Vec<&str>>();
+        let path = parts.filter(|p| !p.is_empty()).collect::<Vec<&str>>();
         let filename = path.last().unwrap_or(&"index.html").to_string();
         let path = path.join("/");
         let path = format!("/{}", path);

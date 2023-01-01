@@ -5,7 +5,7 @@ use std::{
     str::FromStr,
 };
 
-use super::HttpVersion;
+use super::{Configuration, HttpVersion};
 
 #[derive(Debug)]
 pub enum HttpStatus {
@@ -84,17 +84,24 @@ impl HttpResponse {
         self.headers.get(k).map(|s| &**s)
     }
 
+    pub fn get_data(&self) -> &[u8] {
+        &self.data
+    }
+
     pub fn serialize(&self) -> Vec<u8> {
         self.to_string().into_bytes()
     }
 
-    pub fn receive_response<S>(mut socket: &mut S) -> io::Result<Self>
+    pub fn receive_response<S>(mut socket: &mut S, config: &Configuration) -> io::Result<Self>
     where
         S: BufRead,
     {
         let mut response = {
             let line = read_http_line(&mut socket)?;
-            let mut line_split = line.split(" ");
+            if config.debug > 1 {
+                println!("Read status line: {}", &line);
+            }
+            let mut line_split = line.split(' ');
 
             let version_str = line_split.next().expect("No Version in response");
             let version =
@@ -113,7 +120,13 @@ impl HttpResponse {
         loop {
             let line = read_http_line(&mut socket)?;
             if line.is_empty() {
+                if config.debug > 1 {
+                    println!("Finished reading headers");
+                }
                 break;
+            }
+            if config.debug > 1 {
+                println!("Read header line: {}", &line);
             }
             let mut line_split = line.split(": ");
             let key = line_split.next().expect("No header key");
@@ -123,6 +136,9 @@ impl HttpResponse {
 
         if let Some(len_str) = response.get_header("Content-Length") {
             let length = len_str.parse::<usize>().expect("Invalid content length");
+            if config.debug > 1 {
+                println!("receiving normal file of length {}", length);
+            }
             let mut buf = vec![0; length];
             socket.read_exact(&mut buf)?;
             response.set_data(buf);
@@ -130,6 +146,9 @@ impl HttpResponse {
             let mut data: Vec<u8> = Vec::new();
             loop {
                 let len_str = read_http_line(&mut socket)?;
+                if config.debug > 1 {
+                    println!("receiving chunk of length 0x{}", len_str);
+                }
                 let length: usize =
                     usize::from_str_radix(&len_str, 16).expect("Invalid chunk length");
                 if length == 0 {
@@ -144,6 +163,9 @@ impl HttpResponse {
                     panic!("Invalid chunk ending");
                 }
             }
+            if config.debug > 1 {
+                println!("All chunks received");
+            }
             response.set_data(data);
             // TODO parse trailers?
         }
@@ -157,9 +179,7 @@ impl fmt::Display for HttpResponse {
         write!(
             f,
             "{} {} {}\r\n",
-            self.version.to_string(),
-            self.status_code,
-            self.status_message
+            self.version, self.status_code, self.status_message
         )?;
         for (key, value) in &self.headers {
             write!(f, "{}: {}\r\n", key, value)?;
