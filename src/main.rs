@@ -8,8 +8,8 @@ use std::{
 use clap::Parser;
 
 use rust_wget::http::{
-    Configuration, HttpMethod, HttpRequest, HttpResponse, HttpStatus, HttpVersion, ParsedUrl,
-    Protocol,
+    Configuration, HttpConnectionCache, HttpMethod, HttpRequest, HttpResponse, HttpStatus,
+    HttpVersion, ParsedUrl, Protocol,
 };
 
 #[derive(Debug, Parser)]
@@ -31,9 +31,11 @@ struct Options {
     urls: Vec<String>,
 }
 
-fn fetch_url(url: &ParsedUrl, config: &Configuration) -> io::Result<HttpResponse> {
-    let mut socket = TcpStream::connect((&url.domain_name[..], url.port))?;
-
+fn fetch_url(
+    url: &ParsedUrl,
+    socket: &mut TcpStream,
+    config: &Configuration,
+) -> io::Result<HttpResponse> {
     let mut request = HttpRequest::new(HttpMethod::Get, &url.path, HttpVersion::Version1_1);
     request.add_header("Host", &url.domain_name);
     request.add_header("User-Agent", "Wget/1.21.3");
@@ -78,6 +80,7 @@ fn main() {
             Box::new(File::create(path).expect("Could not open requested output file!"))
         }
     });
+    let mut connection_cache = HttpConnectionCache::default();
     for url in options.urls {
         let mut current_url = url;
         let mut successful = false;
@@ -87,7 +90,10 @@ fn main() {
                 println!("{:?}", parsed_url);
             }
             assert!(parsed_url.protocol == Protocol::Http);
-            let result = fetch_url(&parsed_url, &config);
+            let socket = connection_cache
+                .get_connection(&parsed_url, &config)
+                .expect("Failed to connect");
+            let result = fetch_url(&parsed_url, socket, &config);
             match result {
                 Ok(response) => {
                     if config.debug > 0 {
