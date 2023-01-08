@@ -91,6 +91,15 @@ impl HttpResponse {
         self.headers.get(k).map(|s| &**s)
     }
 
+    pub fn delete_header<K>(&mut self, key: &K) -> Option<String>
+    where
+        K: ?Sized,
+        String: Borrow<K>,
+        K: Hash + Eq,
+    {
+        self.headers.remove(key)
+    }
+
     pub fn get_data(&self) -> &[u8] {
         &self.data
     }
@@ -215,6 +224,34 @@ mod tests {
     #[test]
     fn can_construct_http_response() {
         let _ = HttpResponse::new(HttpVersion::Version0_9, HttpStatus::Ok, "Ok".to_string());
+    }
+
+    #[test]
+    fn can_add_headers() {
+        let mut resp = HttpResponse::new(HttpVersion::Version1_1, HttpStatus::Ok, "Ok".to_string());
+        resp.add_header("my header", "my value");
+        resp.add_header("my header 2", "my value 2");
+        assert_eq!(resp.get_header("my header"), Some("my value"));
+        assert_eq!(resp.get_header("my header 2"), Some("my value 2"));
+        assert_eq!(resp.get_header("non existant"), None);
+    }
+
+    #[test]
+    fn can_delete_headers() {
+        let mut resp = HttpResponse::new(HttpVersion::Version1_1, HttpStatus::Ok, "Ok".to_string());
+        resp.add_header("my header", "my value");
+        resp.add_header("my header 2", "my value 2");
+        assert_eq!(resp.get_header("my header"), Some("my value"));
+        assert_eq!(resp.get_header("my header 2"), Some("my value 2"));
+        assert_eq!(resp.get_header("non existant"), None);
+
+        assert_eq!(
+            resp.delete_header("my header 2"),
+            Some("my value 2".to_string())
+        );
+        assert_eq!(resp.get_header("my header 2"), None);
+        assert_eq!(resp.delete_header("my header 2"), None);
+        assert_eq!(resp.delete_header("non existant"), None);
     }
 
     #[test]

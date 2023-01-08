@@ -66,6 +66,15 @@ impl HttpRequest {
     {
         self.headers.get(key).map(|v| &**v)
     }
+
+    pub fn delete_header<K>(&mut self, key: &K) -> Option<String>
+    where
+        K: ?Sized,
+        String: Borrow<K>,
+        K: Hash + Eq,
+    {
+        self.headers.remove(key)
+    }
 }
 
 impl fmt::Display for HttpRequest {
@@ -127,8 +136,26 @@ mod tests {
         req.add_header("my header", "my value");
         req.add_header("my header 2", "my value 2");
         assert_eq!(req.get_header("my header"), Some("my value"));
-        assert_eq!(req.get_header("my header"), Some("my value"));
+        assert_eq!(req.get_header("my header 2"), Some("my value 2"));
         assert_eq!(req.get_header("non existant"), None);
+    }
+
+    #[test]
+    fn can_delete_headers() {
+        let mut req = HttpRequest::new(HttpMethod::Get, "/", HttpVersion::Version1_1);
+        req.add_header("my header", "my value");
+        req.add_header("my header 2", "my value 2");
+        assert_eq!(req.get_header("my header"), Some("my value"));
+        assert_eq!(req.get_header("my header 2"), Some("my value 2"));
+        assert_eq!(req.get_header("non existant"), None);
+
+        assert_eq!(
+            req.delete_header("my header 2"),
+            Some("my value 2".to_string())
+        );
+        assert_eq!(req.get_header("my header 2"), None);
+        assert_eq!(req.delete_header("my header 2"), None);
+        assert_eq!(req.delete_header("non existant"), None);
     }
 
     #[test]

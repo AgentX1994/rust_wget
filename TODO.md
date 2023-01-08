@@ -14,8 +14,8 @@ rust_wget TODOs
 - Retry on network problems
     - How to test?
 - ~~Unit tests~~
-- Allow removing headers from requests
-    - and responses?
+- ~~Allow removing headers from requests~~
+    - ~~and responses?~~
 - Move Protocol somewhere else
     - it doesn't make sense in the `http` module
 - Maybe allow ordering of HTTP headers?
