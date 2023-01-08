@@ -1,4 +1,5 @@
 use core::fmt;
+use std::str::FromStr;
 
 use crate::error::{WgetError, WgetResult};
 
@@ -51,6 +52,19 @@ impl Protocol {
     pub fn get_port(&self) -> u16 {
         match self {
             Protocol::Http => 80,
+        }
+    }
+}
+
+impl FromStr for Protocol {
+    type Err = WgetError;
+
+    fn from_str(s: &str) -> WgetResult<Self> {
+        match s {
+            "http:" => Ok(Protocol::Http),
+            "https:" => todo!("HTTPS is not yet implemented"),
+            "tcp:" => todo!("TCP is not yet implemented"),
+            _ => Err(WgetError::ParsingError(format!("Unknown protocol: {}", s))),
         }
     }
 }

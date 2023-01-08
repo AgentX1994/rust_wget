@@ -92,7 +92,7 @@ fn main() -> anyhow::Result<()> {
         let mut current_url = url;
         let mut successful = false;
         while !successful {
-            let parsed_url = ParsedUrl::parse(&current_url)?;
+            let parsed_url = ParsedUrl::parse(&current_url, &config)?;
             if config.debug > 0 {
                 println!("{:?}", parsed_url);
             }

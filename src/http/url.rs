@@ -3,6 +3,8 @@ use crate::{
     http::common::Protocol,
 };
 
+use super::Configuration;
+
 #[derive(Debug, PartialEq, Eq)]
 pub struct ParsedUrl {
     pub protocol: Protocol,
@@ -13,21 +15,25 @@ pub struct ParsedUrl {
 }
 
 impl ParsedUrl {
-    pub fn parse(url: &str) -> WgetResult<Self> {
-        let mut parts = url.split('/');
-        let protocol_str = parts
-            .next()
+    pub fn parse(url: &str, config: &Configuration) -> WgetResult<Self> {
+        let mut parts = url.split('/').peekable();
+        let protocol_str = *parts
+            .peek()
             .ok_or_else(|| WgetError::ParsingError("Empty url!".to_string()))?;
-        let protocol = match protocol_str {
-            "http:" => Protocol::Http,
-            _ => {
-                return Err(WgetError::ParsingError(format!(
-                    "Unknown protocol {}",
-                    protocol_str
-                )))
+        let protocol = match protocol_str.parse::<Protocol>() {
+            Ok(p) => {
+                // Skip the protocol and empty section between the two // now
+                let _ = parts.next();
+                let _ = parts.next();
+                p
             }
+            Err(_) => {
+                if config.debug > 0 {
+                    println!("No protocol found, assuming HTTP!");
+                }
+                Protocol::Http
+            } // Assume this is the domain name then
         };
-        let _ = parts.next();
         let (domain_name, port) = {
             let domain_name_port = parts
                 .next()
@@ -68,7 +74,8 @@ mod tests {
 
     #[test]
     fn parses_common_url() {
-        let url = ParsedUrl::parse("http://google.com").expect("Couldn't parse!");
+        let config = Configuration { debug: 0 };
+        let url = ParsedUrl::parse("http://google.com", &config).expect("Couldn't parse!");
         assert_eq!(
             url,
             ParsedUrl {
@@ -83,7 +90,8 @@ mod tests {
 
     #[test]
     fn parses_uncommon_url() {
-        let url = ParsedUrl::parse("http://test").expect("Couldn't parse!");
+        let config = Configuration { debug: 0 };
+        let url = ParsedUrl::parse("http://test", &config).expect("Couldn't parse!");
         assert_eq!(
             url,
             ParsedUrl {
@@ -97,8 +105,25 @@ mod tests {
     }
 
     #[test]
+    fn parses_url_without_protocol() {
+        let config = Configuration { debug: 0 };
+        let url = ParsedUrl::parse("www.google.com", &config).expect("Couldn't parse!");
+        assert_eq!(
+            url,
+            ParsedUrl {
+                protocol: Protocol::Http,
+                domain_name: "www.google.com".to_string(),
+                port: 80,
+                path: "/".to_string(),
+                filename: "index.html".to_string()
+            }
+        )
+    }
+
+    #[test]
     fn parses_url_with_port() {
-        let url = ParsedUrl::parse("http://test:8080").expect("Couldn't parse!");
+        let config = Configuration { debug: 0 };
+        let url = ParsedUrl::parse("http://test:8080", &config).expect("Couldn't parse!");
         assert_eq!(
             url,
             ParsedUrl {
@@ -113,7 +138,8 @@ mod tests {
 
     #[test]
     fn parses_url_with_path() {
-        let url = ParsedUrl::parse("http://test/my_site.html").expect("Couldn't parse!");
+        let config = Configuration { debug: 0 };
+        let url = ParsedUrl::parse("http://test/my_site.html", &config).expect("Couldn't parse!");
         assert_eq!(
             url,
             ParsedUrl {
@@ -128,7 +154,9 @@ mod tests {
 
     #[test]
     fn parses_url_with_port_and_path() {
-        let url = ParsedUrl::parse("http://test:8080/my_site.html").expect("Couldn't parse!");
+        let config = Configuration { debug: 0 };
+        let url =
+            ParsedUrl::parse("http://test:8080/my_site.html", &config).expect("Couldn't parse!");
         assert_eq!(
             url,
             ParsedUrl {
