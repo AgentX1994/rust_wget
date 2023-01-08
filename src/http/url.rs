@@ -47,3 +47,83 @@ impl ParsedUrl {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_common_url() {
+        let url = ParsedUrl::parse("http://google.com");
+        assert_eq!(
+            url,
+            ParsedUrl {
+                protocol: Protocol::Http,
+                domain_name: "google.com".to_string(),
+                port: 80,
+                path: "/".to_string(),
+                filename: "index.html".to_string()
+            }
+        )
+    }
+
+    #[test]
+    fn parses_uncommon_url() {
+        let url = ParsedUrl::parse("http://test");
+        assert_eq!(
+            url,
+            ParsedUrl {
+                protocol: Protocol::Http,
+                domain_name: "test".to_string(),
+                port: 80,
+                path: "/".to_string(),
+                filename: "index.html".to_string()
+            }
+        )
+    }
+
+    #[test]
+    fn parses_url_with_port() {
+        let url = ParsedUrl::parse("http://test:8080");
+        assert_eq!(
+            url,
+            ParsedUrl {
+                protocol: Protocol::Http,
+                domain_name: "test".to_string(),
+                port: 8080,
+                path: "/".to_string(),
+                filename: "index.html".to_string()
+            }
+        )
+    }
+
+    #[test]
+    fn parses_url_with_path() {
+        let url = ParsedUrl::parse("http://test/my_site.html");
+        assert_eq!(
+            url,
+            ParsedUrl {
+                protocol: Protocol::Http,
+                domain_name: "test".to_string(),
+                port: 80,
+                path: "/my_site.html".to_string(),
+                filename: "my_site.html".to_string()
+            }
+        )
+    }
+
+    #[test]
+    fn parses_url_with_port_and_path() {
+        let url = ParsedUrl::parse("http://test:8080/my_site.html");
+        assert_eq!(
+            url,
+            ParsedUrl {
+                protocol: Protocol::Http,
+                domain_name: "test".to_string(),
+                port: 8080,
+                path: "/my_site.html".to_string(),
+                filename: "my_site.html".to_string()
+            }
+        )
+    }
+}

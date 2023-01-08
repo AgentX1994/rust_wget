@@ -1,6 +1,6 @@
 use core::fmt;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum HttpVersion {
     Version0_9,
     Version1_0,
@@ -53,4 +53,31 @@ impl Protocol {
 #[derive(Debug, Default)]
 pub struct Configuration {
     pub debug: u8,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_http_version() {
+        assert_eq!("HTTP/0.9".try_into(), Ok(HttpVersion::Version0_9));
+        assert_eq!("HTTP/1.0".try_into(), Ok(HttpVersion::Version1_0));
+        assert_eq!("HTTP/1.1".try_into(), Ok(HttpVersion::Version1_1));
+        assert_eq!("HTTP/2".try_into(), Ok(HttpVersion::Version2_0));
+        assert_eq!(HttpVersion::try_from("not a version"), Err(()));
+    }
+
+    #[test]
+    fn version_to_string() {
+        assert_eq!(HttpVersion::Version0_9.to_string(), "HTTP/0.9");
+        assert_eq!(HttpVersion::Version1_0.to_string(), "HTTP/1.0");
+        assert_eq!(HttpVersion::Version1_1.to_string(), "HTTP/1.1");
+        assert_eq!(HttpVersion::Version2_0.to_string(), "HTTP/2");
+    }
+
+    #[test]
+    fn gets_default_port_for_protocol() {
+        assert_eq!(Protocol::Http.get_port(), 80);
+    }
 }

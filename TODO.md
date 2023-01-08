@@ -1,6 +1,8 @@
 rust_wget TODOs
 
 - Implement all HTTP status codes
+- Allow not specifying protocol
+    - default to HTTP
 - HTTPS
     - TLS
 - Recursive fetching
@@ -11,8 +13,14 @@ rust_wget TODOs
     - async Rust, or just a periodic timeout?
 - Retry on network problems
     - How to test?
-- Unit tests
+- ~~Unit tests~~
+- Allow removing headers from requests
+    - and responses?
+- Move Protocol somewhere else
+    - it doesn't make sense in the `http` module
+- Maybe allow ordering of HTTP headers?
 - Integration tests
+- Docs and Doc tests
 - Make options closer to wget's
 - Error handling
 - FTP
