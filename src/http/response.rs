@@ -7,6 +7,8 @@ use std::{
     str::FromStr,
 };
 
+use crate::error::{WgetError, WgetResult};
+
 use super::{Configuration, HttpVersion};
 
 #[derive(Debug, PartialEq, Eq)]
@@ -16,15 +18,17 @@ pub enum HttpStatus {
 }
 
 impl FromStr for HttpStatus {
-    type Err = ();
+    type Err = WgetError;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let status_code = s.parse::<u16>().or(Err(()))?;
+    fn from_str(s: &str) -> WgetResult<Self> {
+        let status_code = s
+            .parse::<u16>()
+            .map_err(|_| WgetError::ParsingError(format!("Not a valid status code: {}", s)))?;
 
         match status_code {
             200 => Ok(HttpStatus::Ok),
             301 => Ok(HttpStatus::MovedPermanently),
-            _ => unimplemented!(),
+            _ => todo!("Unimplemented status code {}", status_code),
         }
     }
 }
@@ -108,7 +112,7 @@ impl HttpResponse {
         self.to_string().into_bytes()
     }
 
-    pub fn receive_response<S>(mut socket: &mut S, config: &Configuration) -> io::Result<Self>
+    pub fn receive_response<S>(mut socket: &mut S, config: &Configuration) -> WgetResult<Self>
     where
         S: BufRead,
     {
@@ -119,16 +123,19 @@ impl HttpResponse {
             }
             let mut line_split = line.split(' ');
 
-            let version_str = line_split.next().expect("No Version in response");
-            let version =
-                HttpVersion::try_from(version_str).expect("Unable to determine HTTP version");
+            let version_str = line_split
+                .next()
+                .ok_or_else(|| WgetError::ParsingError("No Version in response".to_string()))?;
+            let version = HttpVersion::try_from(version_str)?;
 
-            let status_code_str = line_split.next().expect("No status code");
-            let status_code = status_code_str
-                .parse::<HttpStatus>()
-                .expect("Unable to detect status code");
+            let status_code_str = line_split
+                .next()
+                .ok_or_else(|| WgetError::ParsingError("No status code".to_string()))?;
+            let status_code = status_code_str.parse::<HttpStatus>()?;
 
-            let status_message = line_split.next().expect("No status message");
+            let status_message = line_split
+                .next()
+                .ok_or_else(|| WgetError::ParsingError("No status message".to_string()))?;
 
             HttpResponse::new(version, status_code, status_message.to_string())
         };
@@ -145,13 +152,19 @@ impl HttpResponse {
                 println!("Read header line: {}", &line);
             }
             let mut line_split = line.split(": ");
-            let key = line_split.next().expect("No header key");
-            let value = line_split.next().expect("No header value");
+            let key = line_split
+                .next()
+                .ok_or_else(|| WgetError::ParsingError("No header key".to_string()))?;
+            let value = line_split
+                .next()
+                .ok_or_else(|| WgetError::ParsingError("No header value".to_string()))?;
             response.add_header(key, value);
         }
 
         if let Some(len_str) = response.get_header("Content-Length") {
-            let length = len_str.parse::<usize>().expect("Invalid content length");
+            let length = len_str.parse::<usize>().map_err(|_| {
+                WgetError::ParsingError(format!("Invalid content length {}", len_str))
+            })?;
             if config.debug > 1 {
                 println!("receiving normal file of length {}", length);
             }
@@ -165,8 +178,9 @@ impl HttpResponse {
                 if config.debug > 1 {
                     println!("receiving chunk of length 0x{}", len_str);
                 }
-                let length: usize =
-                    usize::from_str_radix(&len_str, 16).expect("Invalid chunk length");
+                let length: usize = usize::from_str_radix(&len_str, 16).map_err(|_| {
+                    WgetError::ParsingError(format!("Invalid chunk length {}", len_str))
+                })?;
                 if length == 0 {
                     break;
                 }
@@ -210,9 +224,12 @@ mod tests {
 
     #[test]
     fn can_parse_http_status() {
-        assert_eq!("200".parse(), Ok(HttpStatus::Ok));
-        assert_eq!("301".parse(), Ok(HttpStatus::MovedPermanently));
-        assert_eq!("Not a status".parse::<HttpStatus>(), Err(()));
+        assert!(matches!("200".parse(), Ok(HttpStatus::Ok)));
+        assert!(matches!("301".parse(), Ok(HttpStatus::MovedPermanently)));
+        assert!(matches!(
+            "Not a status".parse::<HttpStatus>(),
+            Err(WgetError::ParsingError(_))
+        ));
     }
 
     #[test]

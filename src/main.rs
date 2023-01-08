@@ -7,9 +7,12 @@ use std::{
 
 use clap::Parser;
 
-use rust_wget::http::{
-    Configuration, HttpConnectionCache, HttpMethod, HttpRequest, HttpResponse, HttpStatus,
-    HttpVersion, ParsedUrl, Protocol,
+use rust_wget::{
+    error::WgetResult,
+    http::{
+        Configuration, HttpConnectionCache, HttpMethod, HttpRequest, HttpResponse, HttpStatus,
+        HttpVersion, ParsedUrl, Protocol,
+    },
 };
 
 #[derive(Debug, Parser)]
@@ -35,7 +38,7 @@ fn fetch_url(
     url: &ParsedUrl,
     socket: &mut TcpStream,
     config: &Configuration,
-) -> io::Result<HttpResponse> {
+) -> WgetResult<HttpResponse> {
     let mut request = HttpRequest::new(HttpMethod::Get, &url.path, HttpVersion::Version1_1);
     request.add_header("Host", &url.domain_name);
     request.add_header("User-Agent", "Wget/1.21.3");
@@ -58,7 +61,7 @@ fn fetch_url(
     HttpResponse::receive_response(&mut socket_reader, config)
 }
 
-fn main() {
+fn main() -> anyhow::Result<()> {
     let options = Options::parse();
     if options.debug > 0 {
         println!("{:?}", options);
@@ -67,32 +70,34 @@ fn main() {
     let config = Configuration {
         debug: options.debug,
     };
-    let mut output_file = options.output_file.map(|path| {
-        if path == "-" {
-            if config.debug > 0 {
-                println!("Writing to stdout");
+    let mut output_file = options
+        .output_file
+        .map(|path| {
+            if path == "-" {
+                if config.debug > 0 {
+                    println!("Writing to stdout");
+                }
+                Ok(Box::new(io::stdout()) as Box<dyn io::Write>)
+            } else {
+                if config.debug > 0 {
+                    println!("Writing to {}", path);
+                }
+                File::create(path).map(|f| Box::new(f) as Box<dyn io::Write>)
             }
-            Box::new(io::stdout()) as Box<dyn io::Write>
-        } else {
-            if config.debug > 0 {
-                println!("Writing to {}", path);
-            }
-            Box::new(File::create(path).expect("Could not open requested output file!"))
-        }
-    });
+        })
+        // Go from Option<Result<...>> to Result<Option<...>>
+        .map_or(Ok(None), |r| r.map(Some))?;
     let mut connection_cache = HttpConnectionCache::default();
     for url in options.urls {
         let mut current_url = url;
         let mut successful = false;
         while !successful {
-            let parsed_url = ParsedUrl::parse(&current_url);
+            let parsed_url = ParsedUrl::parse(&current_url)?;
             if config.debug > 0 {
                 println!("{:?}", parsed_url);
             }
             assert!(parsed_url.protocol == Protocol::Http);
-            let socket = connection_cache
-                .get_connection(&parsed_url, &config)
-                .expect("Failed to connect");
+            let socket = connection_cache.get_connection(&parsed_url, &config)?;
             let result = fetch_url(&parsed_url, socket, &config);
             match result {
                 Ok(response) => {
@@ -109,9 +114,8 @@ fn main() {
                                 if let Err(e) = output_file.write_all(response.get_data()) {
                                     eprintln!("Could not write data to output file: {}", e);
                                 }
-                            } else if let Err(e) = File::create(parsed_url.filename)
-                                .expect("Could not create output file")
-                                .write_all(response.get_data())
+                            } else if let Err(e) =
+                                File::create(parsed_url.filename)?.write_all(response.get_data())
                             {
                                 eprintln!("Could not write data to output file: {}", e);
                             }
@@ -143,4 +147,6 @@ fn main() {
     if has_error {
         std::process::exit(1);
     }
+
+    Ok(())
 }

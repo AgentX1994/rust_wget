@@ -1,5 +1,7 @@
 use core::fmt;
 
+use crate::error::{WgetError, WgetResult};
+
 #[derive(Debug, PartialEq, Eq)]
 pub enum HttpVersion {
     Version0_9,
@@ -10,15 +12,18 @@ pub enum HttpVersion {
 
 impl TryFrom<&str> for HttpVersion {
     // TODO error
-    type Error = ();
+    type Error = WgetError;
 
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
+    fn try_from(value: &str) -> WgetResult<Self> {
         match value {
             "HTTP/0.9" => Ok(HttpVersion::Version0_9),
             "HTTP/1.0" => Ok(HttpVersion::Version1_0),
             "HTTP/1.1" => Ok(HttpVersion::Version1_1),
             "HTTP/2" => Ok(HttpVersion::Version2_0),
-            _ => Err(()),
+            _ => Err(WgetError::ParsingError(format!(
+                "Invalid Version {}",
+                value
+            ))),
         }
     }
 }
@@ -61,11 +66,14 @@ mod tests {
 
     #[test]
     fn parses_http_version() {
-        assert_eq!("HTTP/0.9".try_into(), Ok(HttpVersion::Version0_9));
-        assert_eq!("HTTP/1.0".try_into(), Ok(HttpVersion::Version1_0));
-        assert_eq!("HTTP/1.1".try_into(), Ok(HttpVersion::Version1_1));
-        assert_eq!("HTTP/2".try_into(), Ok(HttpVersion::Version2_0));
-        assert_eq!(HttpVersion::try_from("not a version"), Err(()));
+        assert!(matches!("HTTP/0.9".try_into(), Ok(HttpVersion::Version0_9)));
+        assert!(matches!("HTTP/1.0".try_into(), Ok(HttpVersion::Version1_0)));
+        assert!(matches!("HTTP/1.1".try_into(), Ok(HttpVersion::Version1_1)));
+        assert!(matches!("HTTP/2".try_into(), Ok(HttpVersion::Version2_0)));
+        assert!(matches!(
+            HttpVersion::try_from("not a version"),
+            Err(WgetError::ParsingError(_))
+        ));
     }
 
     #[test]
