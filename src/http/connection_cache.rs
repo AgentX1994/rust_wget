@@ -128,7 +128,14 @@ mod tests {
             let conn = conn_cache
                 .get_connection(&url, &config)
                 .expect("Could not connect!");
-            conn.as_raw_fd()
+            #[cfg(not(target_os = "windows"))]
+            {
+                conn.as_raw_fd()
+            }
+            #[cfg(target_os = "windows")]
+            {
+                conn.as_raw_socket()
+            }
         };
 
         let fd2 = {
@@ -142,7 +149,14 @@ mod tests {
             let conn = conn_cache
                 .get_connection(&url, &config)
                 .expect("Could not connect!");
-            conn.as_raw_fd()
+            #[cfg(not(target_os = "windows"))]
+            {
+                conn.as_raw_fd()
+            }
+            #[cfg(target_os = "windows")]
+            {
+                conn.as_raw_socket()
+            }
         };
         assert_eq!(fd1, fd2);
     }
@@ -168,7 +182,14 @@ mod tests {
             let conn = conn_cache
                 .get_connection(&url, &config)
                 .expect("Could not connect!");
-            conn.as_raw_fd()
+            #[cfg(not(target_os = "windows"))]
+            {
+                conn.as_raw_fd()
+            }
+            #[cfg(target_os = "windows")]
+            {
+                conn.as_raw_socket()
+            }
         };
 
         let fd2 = {
@@ -182,7 +203,14 @@ mod tests {
             let conn = conn_cache
                 .get_connection(&url, &config)
                 .expect("Could not connect!");
-            conn.as_raw_fd()
+            #[cfg(not(target_os = "windows"))]
+            {
+                conn.as_raw_fd()
+            }
+            #[cfg(target_os = "windows")]
+            {
+                conn.as_raw_socket()
+            }
         };
         assert_ne!(fd1, fd2);
     }
