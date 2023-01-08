@@ -1,8 +1,8 @@
 rust_wget TODOs
 
 - Implement all HTTP status codes
-- Allow not specifying protocol
-    - default to HTTP
+- ~~Allow not specifying protocol~~
+    - ~~default to HTTP~~
 - HTTPS
     - TLS
 - Recursive fetching
@@ -22,5 +22,5 @@ rust_wget TODOs
 - Integration tests
 - Docs and Doc tests
 - Make options closer to wget's
-- Error handling
+- ~~Error handling~~
 - FTP
