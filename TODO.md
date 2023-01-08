@@ -15,4 +15,4 @@ rust_wget TODOs
 - Integration tests
 - Make options closer to wget's
 - Error handling
-- TCP
+- FTP
