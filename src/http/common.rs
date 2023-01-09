@@ -1,5 +1,4 @@
 use core::fmt;
-use std::str::FromStr;
 
 use crate::error::{WgetError, WgetResult};
 
@@ -41,39 +40,6 @@ impl fmt::Display for HttpVersion {
     }
 }
 
-// TODO error handling
-#[derive(Debug, PartialEq, Eq)]
-pub enum Protocol {
-    // TODO allow https?
-    Http,
-}
-
-impl Protocol {
-    pub fn get_port(&self) -> u16 {
-        match self {
-            Protocol::Http => 80,
-        }
-    }
-}
-
-impl FromStr for Protocol {
-    type Err = WgetError;
-
-    fn from_str(s: &str) -> WgetResult<Self> {
-        match s {
-            "http:" => Ok(Protocol::Http),
-            "https:" => todo!("HTTPS is not yet implemented"),
-            "tcp:" => todo!("TCP is not yet implemented"),
-            _ => Err(WgetError::ParsingError(format!("Unknown protocol: {}", s))),
-        }
-    }
-}
-
-#[derive(Debug, Default)]
-pub struct Configuration {
-    pub debug: u8,
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -96,10 +62,5 @@ mod tests {
         assert_eq!(HttpVersion::Version1_0.to_string(), "HTTP/1.0");
         assert_eq!(HttpVersion::Version1_1.to_string(), "HTTP/1.1");
         assert_eq!(HttpVersion::Version2_0.to_string(), "HTTP/2");
-    }
-
-    #[test]
-    fn gets_default_port_for_protocol() {
-        assert_eq!(Protocol::Http.get_port(), 80);
     }
 }

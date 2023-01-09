@@ -1,6 +1,6 @@
 use std::{collections::HashMap, io, net::TcpStream};
 
-use super::{Configuration, ParsedUrl};
+use crate::{url::ParsedUrl, Configuration};
 
 #[derive(Debug, Default)]
 pub struct HttpConnectionCache {
@@ -47,7 +47,7 @@ mod tests {
         thread::{self, JoinHandle},
     };
 
-    use crate::http::Protocol;
+    use crate::protocol::Protocol;
 
     use super::*;
 

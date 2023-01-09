@@ -16,8 +16,9 @@ rust_wget TODOs
 - ~~Unit tests~~
 - ~~Allow removing headers from requests~~
     - ~~and responses?~~
-- Move Protocol somewhere else
-    - it doesn't make sense in the `http` module
+- ~~Move Protocol somewhere else~~
+    - ~~it doesn't make sense in the `http` module~~
+- Make URL parsing more robust
 - Maybe allow ordering of HTTP headers?
 - Integration tests
 - Docs and Doc tests

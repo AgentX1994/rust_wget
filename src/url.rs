@@ -1,6 +1,6 @@
 use crate::{
     error::{WgetError, WgetResult},
-    http::common::Protocol,
+    protocol::Protocol,
 };
 
 use super::Configuration;
@@ -150,6 +150,50 @@ mod tests {
                 filename: "my_site.html".to_string()
             }
         )
+    }
+
+    #[test]
+    fn parses_url_with_protocol() {
+        let config = Configuration { debug: 0 };
+        {
+            let url = ParsedUrl::parse("http://test", &config).expect("Couldn't parse");
+            assert_eq!(
+                url,
+                ParsedUrl {
+                    protocol: Protocol::Http,
+                    domain_name: "test".to_string(),
+                    port: 80,
+                    path: "/".to_string(),
+                    filename: "index.html".to_string()
+                }
+            )
+        }
+        {
+            let url = ParsedUrl::parse("https://test", &config).expect("Couldn't parse");
+            assert_eq!(
+                url,
+                ParsedUrl {
+                    protocol: Protocol::Https,
+                    domain_name: "test".to_string(),
+                    port: 443,
+                    path: "/".to_string(),
+                    filename: "index.html".to_string()
+                }
+            )
+        }
+        {
+            let url = ParsedUrl::parse("ftp://test", &config).expect("Couldn't parse");
+            assert_eq!(
+                url,
+                ParsedUrl {
+                    protocol: Protocol::Ftp,
+                    domain_name: "test".to_string(),
+                    port: 21,
+                    path: "/".to_string(),
+                    filename: "index.html".to_string()
+                }
+            )
+        }
     }
 
     #[test]

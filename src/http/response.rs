@@ -7,9 +7,12 @@ use std::{
     str::FromStr,
 };
 
-use crate::error::{WgetError, WgetResult};
+use crate::{
+    error::{WgetError, WgetResult},
+    Configuration,
+};
 
-use super::{Configuration, HttpVersion};
+use super::HttpVersion;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum HttpStatus {

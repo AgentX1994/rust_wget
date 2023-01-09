@@ -9,10 +9,10 @@ use clap::Parser;
 
 use rust_wget::{
     error::WgetResult,
-    http::{
-        Configuration, HttpConnectionCache, HttpMethod, HttpRequest, HttpResponse, HttpStatus,
-        HttpVersion, ParsedUrl, Protocol,
-    },
+    http::{HttpConnectionCache, HttpMethod, HttpRequest, HttpResponse, HttpStatus, HttpVersion},
+    protocol::Protocol,
+    url::ParsedUrl,
+    Configuration,
 };
 
 #[derive(Debug, Parser)]
@@ -96,7 +96,11 @@ fn main() -> anyhow::Result<()> {
             if config.debug > 0 {
                 println!("{:?}", parsed_url);
             }
-            assert!(parsed_url.protocol == Protocol::Http);
+            if parsed_url.protocol != Protocol::Http {
+                return Err(anyhow::anyhow!(
+                    "Protocols other than HTTP are not yet implemented"
+                ));
+            }
             let socket = connection_cache.get_connection(&parsed_url, &config)?;
             let result = fetch_url(&parsed_url, socket, &config);
             match result {
