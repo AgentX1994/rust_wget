@@ -9,7 +9,9 @@ use clap::Parser;
 
 use rust_wget::{
     error::WgetResult,
-    http::{HttpConnectionCache, HttpMethod, HttpRequest, HttpResponse, HttpStatus, HttpVersion},
+    http::{
+        HttpConnectionCache, HttpMethod, HttpRequest, HttpResponse, HttpStatusFamily, HttpVersion,
+    },
     protocol::Protocol,
     url::ParsedUrl,
     Configuration,
@@ -111,8 +113,8 @@ fn main() -> anyhow::Result<()> {
                             response
                         );
                     }
-                    match response.status_code {
-                        HttpStatus::Ok => {
+                    match response.status_family() {
+                        HttpStatusFamily::Successful => {
                             successful = true;
                             if let Some(output_file) = &mut output_file {
                                 if let Err(e) = output_file.write_all(response.get_data()) {
@@ -124,7 +126,7 @@ fn main() -> anyhow::Result<()> {
                                 eprintln!("Could not write data to output file: {}", e);
                             }
                         }
-                        HttpStatus::MovedPermanently => {
+                        HttpStatusFamily::Redirection => {
                             if let Some(new_url) = response.get_header("Location") {
                                 if config.debug > 1 {
                                     println!(
@@ -137,6 +139,27 @@ fn main() -> anyhow::Result<()> {
                                 eprintln!("Got {} without a Location!", response.status_code);
                                 break;
                             }
+                        }
+                        HttpStatusFamily::Informational => {
+                            eprintln!("Received Informational response?");
+                            let bytes = response.serialize();
+                            let response_string = String::from_utf8_lossy(&bytes);
+                            println!("{}", response_string);
+                            successful = true;
+                        }
+                        HttpStatusFamily::ClientError => {
+                            eprintln!("ServerError!");
+                            let bytes = response.serialize();
+                            let response_string = String::from_utf8_lossy(&bytes);
+                            println!("{}", response_string);
+                            successful = true;
+                        }
+                        HttpStatusFamily::ServerError => {
+                            eprintln!("ServerError!");
+                            let bytes = response.serialize();
+                            let response_string = String::from_utf8_lossy(&bytes);
+                            println!("{}", response_string);
+                            successful = true;
                         }
                     }
                 }

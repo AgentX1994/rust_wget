@@ -8,6 +8,8 @@ pub enum WgetError {
     Io(#[from] io::Error),
     #[error("Parsing Error: {0}")]
     ParsingError(String),
+    #[error("Invalid Status Code: {0}")]
+    InvalidStatusCode(u16),
 }
 
 pub type WgetResult<T> = std::result::Result<T, WgetError>;
