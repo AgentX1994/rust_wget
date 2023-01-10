@@ -1,6 +1,6 @@
 rust_wget TODOs
 
-- Implement all HTTP status codes
+- ~~Implement all HTTP status codes~~
 - ~~Allow not specifying protocol~~
     - ~~default to HTTP~~
 - HTTPS
