@@ -18,7 +18,10 @@ rust_wget TODOs
     - ~~and responses?~~
 - ~~Move Protocol somewhere else~~
     - ~~it doesn't make sense in the `http` module~~
-- Make URL parsing more robust
+- ~~Make URL parsing more robust~~
+- Handle IPv6 URLs
+- Make HTTP Response parsing more robust
+    - Can't yet handle spaces in status text
 - Maybe allow ordering of HTTP headers?
 - Integration tests
 - Docs and Doc tests

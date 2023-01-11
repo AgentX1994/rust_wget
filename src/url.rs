@@ -15,34 +15,35 @@ pub struct ParsedUrl {
 }
 
 impl ParsedUrl {
-    pub fn parse(url: &str, config: &Configuration) -> WgetResult<Self> {
-        let mut parts = url.split('/').peekable();
-        let protocol_str = *parts
-            .peek()
-            .ok_or_else(|| WgetError::ParsingError("Empty url!".to_string()))?;
-        let protocol = match protocol_str.parse::<Protocol>() {
-            Ok(p) => {
-                // Skip the protocol and empty section between the two // now
-                let _ = parts.next();
-                let _ = parts.next();
-                p
+    pub fn parse(mut url: &str, config: &Configuration) -> WgetResult<Self> {
+        // First, look for the protocol by looking for a ':' character
+        // If none found, assume HTTP
+        let protocol = if let Some(colon_index) = url.find(':') {
+            let (protocol_str, rest) = url.split_at(colon_index);
+            let protocol = protocol_str.parse()?;
+            url = &rest[1..]; // remove ':'
+            protocol
+        } else {
+            if config.debug > 0 {
+                println!("No protocol found, assuming HTTP!");
             }
-            Err(_) => {
-                if config.debug > 0 {
-                    println!("No protocol found, assuming HTTP!");
-                }
-                Protocol::Http
-            } // Assume this is the domain name then
+            Protocol::Http
         };
+        // If we find a // skip it
+        if &url[..2] == "//" {
+            url = &url[2..];
+        };
+        // Split at / to split the domain name + maybe port section from the path
+        let (domain_and_port_str, path) = if let Some(slash_index) = url.find('/') {
+            url.split_at(slash_index)
+        } else {
+            (url, "/")
+        };
+        // Determine if we are looking at a domain.name:port pair, or just a domain name
+        // TODO: IPv6 domains
         let (domain_name, port) = {
-            let domain_name_port = parts
-                .next()
-                .ok_or_else(|| {
-                    WgetError::ParsingError("Invalid url, unable to read domain name!".to_string())
-                })?
-                .to_string();
-            if let Some(loc) = domain_name_port.rfind(':') {
-                let (domain_name, port_str) = domain_name_port.split_at(loc);
+            if let Some(loc) = domain_and_port_str.rfind(':') {
+                let (domain_name, port_str) = domain_and_port_str.split_at(loc);
                 let port_str = &port_str[1..]; // remove colon
                 (
                     domain_name.to_string(),
@@ -51,13 +52,21 @@ impl ParsedUrl {
                     })?,
                 )
             } else {
-                (domain_name_port, protocol.get_port())
+                (domain_and_port_str.to_string(), protocol.get_port())
             }
         };
-        let path = parts.filter(|p| !p.is_empty()).collect::<Vec<&str>>();
-        let filename = path.last().unwrap_or(&"index.html").to_string();
-        let path = path.join("/");
-        let path = format!("/{}", path);
+        let path = path.to_string();
+        // Grab the final file name from the path, or default to "index.html"
+        let filename = if let Some(loc) = path.rfind('/') {
+            if loc + 1 >= path.len() {
+                "index.html".to_string()
+            } else {
+                path[loc + 1..].to_string()
+            }
+        } else {
+            "index.html".to_string()
+        };
+
         Ok(ParsedUrl {
             protocol,
             domain_name,

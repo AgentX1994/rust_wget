@@ -25,9 +25,9 @@ impl FromStr for Protocol {
 
     fn from_str(s: &str) -> WgetResult<Self> {
         match s {
-            "http:" => Ok(Protocol::Http),
-            "https:" => Ok(Protocol::Https),
-            "ftp:" => Ok(Protocol::Ftp),
+            "http" => Ok(Protocol::Http),
+            "https" => Ok(Protocol::Https),
+            "ftp" => Ok(Protocol::Ftp),
             _ => Err(WgetError::ParsingError(format!("Unknown protocol: {}", s))),
         }
     }
@@ -46,9 +46,9 @@ mod tests {
 
     #[test]
     fn parses_protocol_from_str() {
-        assert!(matches!("http:".parse(), Ok(Protocol::Http)));
-        assert!(matches!("https:".parse(), Ok(Protocol::Https)));
-        assert!(matches!("ftp:".parse(), Ok(Protocol::Ftp)));
+        assert!(matches!("http".parse(), Ok(Protocol::Http)));
+        assert!(matches!("https".parse(), Ok(Protocol::Https)));
+        assert!(matches!("ftp".parse(), Ok(Protocol::Ftp)));
         assert!(matches!(
             "not a protocol".parse::<Protocol>(),
             Err(WgetError::ParsingError(_))
