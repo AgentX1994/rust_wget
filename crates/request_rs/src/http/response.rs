@@ -1,11 +1,11 @@
 use std::{
-    borrow::Borrow,
     collections::HashMap,
     fmt,
-    hash::Hash,
     io::{self, BufRead},
     str::FromStr,
 };
+
+use unicase::UniCase;
 
 use crate::{
     error::{WgetError, WgetResult},
@@ -196,7 +196,7 @@ pub struct HttpResponse {
     pub version: HttpVersion,
     pub status_code: HttpStatusCode,
     pub status_message: String,
-    headers: HashMap<String, String>,
+    headers: HashMap<UniCase<String>, String>,
     data: Vec<u8>,
 }
 
@@ -216,29 +216,29 @@ impl HttpResponse {
     }
 
     pub fn add_header<K: Into<String>, V: Into<String>>(&mut self, key: K, value: V) {
-        self.headers.insert(key.into(), value.into());
+        self.headers.insert(UniCase::new(key.into()), value.into());
     }
 
     pub fn set_data<D: Into<Vec<u8>>>(&mut self, data: D) {
         self.data = data.into();
     }
 
-    pub fn get_header<K>(&self, k: &K) -> Option<&str>
+    pub fn get_header<K>(&self, key: &K) -> Option<&str>
     where
         K: ?Sized,
-        String: Borrow<K>,
-        K: Hash + Eq,
+        K: AsRef<str>,
     {
-        self.headers.get(k).map(|s| &**s)
+        self.headers
+            .get(&UniCase::new(key.as_ref().to_string()))
+            .map(|s| &**s)
     }
 
     pub fn delete_header<K>(&mut self, key: &K) -> Option<String>
     where
         K: ?Sized,
-        String: Borrow<K>,
-        K: Hash + Eq,
+        K: AsRef<str>,
     {
-        self.headers.remove(key)
+        self.headers.remove(&UniCase::new(key.as_ref().to_string()))
     }
 
     pub fn get_data(&self) -> &[u8] {
@@ -516,5 +516,17 @@ mod tests {
         assert_eq!(response.get_header("my header 2"), Some("my value 2"));
         assert_eq!(response.get_header("Content-Length"), Some("5"));
         assert_eq!(response.get_header("not a key"), None);
+    }
+
+    #[test]
+    fn headers_are_case_insensitive() {
+        let mut res = HttpResponse::new(
+            HttpVersion::Version1_1,
+            HttpStatusCode::Ok,
+            "Ok".to_string(),
+        );
+        res.add_header("My Header", "My Value");
+        let value = res.get_header("my header").expect("Couldn't get value");
+        assert_eq!(value, "My Value");
     }
 }

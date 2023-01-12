@@ -1,4 +1,6 @@
-use std::{borrow::Borrow, collections::HashMap, fmt, hash::Hash};
+use std::{collections::HashMap, fmt};
+
+use unicase::UniCase;
 
 use super::HttpVersion;
 
@@ -37,7 +39,7 @@ pub struct HttpRequest {
     method: HttpMethod,
     path: String,
     version: HttpVersion,
-    headers: HashMap<String, String>,
+    headers: HashMap<UniCase<String>, String>,
 }
 
 impl HttpRequest {
@@ -55,25 +57,25 @@ impl HttpRequest {
     }
 
     pub fn add_header<K: Into<String>, V: Into<String>>(&mut self, key: K, value: V) {
-        self.headers.insert(key.into(), value.into());
+        self.headers.insert(UniCase::new(key.into()), value.into());
     }
 
     pub fn get_header<K>(&self, key: &K) -> Option<&str>
     where
         K: ?Sized,
-        String: Borrow<K>,
-        K: Hash + Eq,
+        K: AsRef<str>,
     {
-        self.headers.get(key).map(|v| &**v)
+        self.headers
+            .get(&UniCase::new(key.as_ref().to_string()))
+            .map(|v| &**v)
     }
 
     pub fn delete_header<K>(&mut self, key: &K) -> Option<String>
     where
         K: ?Sized,
-        String: Borrow<K>,
-        K: Hash + Eq,
+        K: AsRef<str>,
     {
-        self.headers.remove(key)
+        self.headers.remove(&UniCase::new(key.as_ref().to_string()))
     }
 }
 
@@ -171,5 +173,13 @@ mod tests {
             (req_serialized == "GET /my_path.html HTTP/1.1\r\nmy header 2: my value 2\r\nmy header: my value\r\n\r\n")
             || (req_serialized ==  "GET /my_path.html HTTP/1.1\r\nmy header: my value\r\nmy header 2: my value 2\r\n\r\n")
         );
+    }
+
+    #[test]
+    fn headers_are_case_insensitive() {
+        let mut req = HttpRequest::new(HttpMethod::Get, "/index.html", HttpVersion::Version1_1);
+        req.add_header("My Header", "My Value");
+        let value = req.get_header("my header").expect("Couldn't get value");
+        assert_eq!(value, "My Value");
     }
 }

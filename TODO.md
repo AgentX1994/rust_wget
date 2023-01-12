@@ -24,8 +24,8 @@ rust_wget TODOs
     - ~~Can't yet handle spaces in status text~~~
     - Parse trailers
     - Parse multiresource bodies
-- Headers should be case-insensitive
-    - both on requests and responses
+- ~~Headers should be case-insensitive~~
+    - ~~both on requests and responses~~
 - ~~Move Lib into separate crate?~~
 - Maybe allow ordering of HTTP headers?
 - Integration tests
