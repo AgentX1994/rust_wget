@@ -8,10 +8,9 @@ use std::{
 use clap::Parser;
 
 use request_rs::{
+    connection_cache::ConnectionCache,
     error::WgetResult,
-    http::{
-        HttpConnectionCache, HttpMethod, HttpRequest, HttpResponse, HttpStatusFamily, HttpVersion,
-    },
+    http::{HttpMethod, HttpRequest, HttpResponse, HttpStatusFamily, HttpVersion},
     protocol::Protocol,
     url::ParsedUrl,
     Configuration,
@@ -89,7 +88,7 @@ fn main() -> anyhow::Result<()> {
         })
         // Go from Option<Result<...>> to Result<Option<...>>
         .map_or(Ok(None), |r| r.map(Some))?;
-    let mut connection_cache = HttpConnectionCache::default();
+    let mut connection_cache = ConnectionCache::default();
     for url in options.urls {
         let mut current_url = url;
         let mut successful = false;

@@ -3,11 +3,11 @@ use std::{collections::HashMap, io, net::TcpStream};
 use crate::{url::ParsedUrl, Configuration};
 
 #[derive(Debug, Default)]
-pub struct HttpConnectionCache {
+pub struct ConnectionCache {
     connections: HashMap<(String, u16), TcpStream>,
 }
 
-impl HttpConnectionCache {
+impl ConnectionCache {
     pub fn get_connection(
         &mut self,
         url: &ParsedUrl,
@@ -86,13 +86,13 @@ mod tests {
 
     #[test]
     fn can_create_default() {
-        let conn_cache = HttpConnectionCache::default();
+        let conn_cache = ConnectionCache::default();
         assert_eq!(conn_cache.connections.len(), 0);
     }
 
     #[test]
     fn creates_connection() {
-        let mut conn_cache = HttpConnectionCache::default();
+        let mut conn_cache = ConnectionCache::default();
         let config = Configuration { debug: 0 };
         let (port, _t) = create_listener_thread();
 
@@ -110,7 +110,7 @@ mod tests {
 
     #[test]
     fn reuses_connection() {
-        let mut conn_cache = HttpConnectionCache::default();
+        let mut conn_cache = ConnectionCache::default();
         let config = Configuration { debug: 0 };
         let (port, _t) = create_listener_thread();
 
@@ -163,7 +163,7 @@ mod tests {
 
     #[test]
     fn creates_new_connection() {
-        let mut conn_cache = HttpConnectionCache::default();
+        let mut conn_cache = ConnectionCache::default();
         let config = Configuration { debug: 0 };
         let (port1, _t1) = create_listener_thread();
         let (port2, _t2) = create_listener_thread();
