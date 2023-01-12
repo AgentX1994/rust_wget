@@ -137,6 +137,7 @@ fn main() -> anyhow::Result<()> {
                                 current_url = new_url.to_string();
                             } else {
                                 eprintln!("Got {} without a Location!", response.status_code);
+                                has_error = true;
                                 break;
                             }
                         }
@@ -145,6 +146,7 @@ fn main() -> anyhow::Result<()> {
                             let bytes = response.serialize();
                             let response_string = String::from_utf8_lossy(&bytes);
                             println!("{}", response_string);
+                            has_error = true;
                             successful = true;
                         }
                         HttpStatusFamily::ClientError => {
@@ -152,6 +154,7 @@ fn main() -> anyhow::Result<()> {
                             let bytes = response.serialize();
                             let response_string = String::from_utf8_lossy(&bytes);
                             println!("{}", response_string);
+                            has_error = true;
                             successful = true;
                         }
                         HttpStatusFamily::ServerError => {
@@ -159,6 +162,7 @@ fn main() -> anyhow::Result<()> {
                             let bytes = response.serialize();
                             let response_string = String::from_utf8_lossy(&bytes);
                             println!("{}", response_string);
+                            has_error = true;
                             successful = true;
                         }
                     }

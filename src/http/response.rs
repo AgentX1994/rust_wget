@@ -270,11 +270,9 @@ impl HttpResponse {
                 .ok_or_else(|| WgetError::ParsingError("No status code".to_string()))?;
             let status_code = status_code_str.parse::<HttpStatusCode>()?;
 
-            let status_message = line_split
-                .next()
-                .ok_or_else(|| WgetError::ParsingError("No status message".to_string()))?;
+            let status_message = line_split.collect::<Vec<_>>().join(" ");
 
-            HttpResponse::new(version, status_code, status_message.to_string())
+            HttpResponse::new(version, status_code, status_message)
         };
 
         loop {

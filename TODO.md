@@ -21,7 +21,12 @@ rust_wget TODOs
 - ~~Make URL parsing more robust~~
 - Handle IPv6 URLs
 - Make HTTP Response parsing more robust
-    - Can't yet handle spaces in status text
+    - ~~Can't yet handle spaces in status text~~~
+    - Parse trailers
+    - Parse multiresource bodies
+- Headers should be case-insensitive
+    - both on requests and responses
+- Move Lib into separate crate?
 - Maybe allow ordering of HTTP headers?
 - Integration tests
 - Docs and Doc tests
