@@ -7,7 +7,7 @@ use std::{
 
 use clap::Parser;
 
-use rust_wget::{
+use request_rs::{
     error::WgetResult,
     http::{
         HttpConnectionCache, HttpMethod, HttpRequest, HttpResponse, HttpStatusFamily, HttpVersion,
