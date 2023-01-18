@@ -1,3 +1,4 @@
+pub mod connection;
 pub mod connection_cache;
 pub mod error;
 pub mod http;

@@ -1,18 +1,12 @@
 use std::{
     fs::File,
-    io::{self, BufReader, Write},
-    net::TcpStream,
-    time::Duration,
+    io::{self, Write},
 };
 
 use clap::Parser;
 
 use request_rs::{
-    connection_cache::ConnectionCache,
-    error::WgetResult,
-    http::{HttpMethod, HttpRequest, HttpResponse, HttpStatusFamily, HttpVersion},
-    protocol::Protocol,
-    url::ParsedUrl,
+    connection_cache::ConnectionCache, http::HttpStatusFamily, protocol::Protocol, url::ParsedUrl,
     Configuration,
 };
 
@@ -33,33 +27,6 @@ struct Options {
 
     /// The URLs to fetch
     urls: Vec<String>,
-}
-
-fn fetch_url(
-    url: &ParsedUrl,
-    socket: &mut TcpStream,
-    config: &Configuration,
-) -> WgetResult<HttpResponse> {
-    let mut request = HttpRequest::new(HttpMethod::Get, &url.path, HttpVersion::Version1_1);
-    request.add_header("Host", &url.domain_name);
-    request.add_header("User-Agent", "Wget/1.21.3");
-    request.add_header("Accept", "*/*");
-    request.add_header("Accept-Encoding", "identity");
-    request.add_header("Connection", "Keep-Alive");
-
-    if config.debug > 0 {
-        println!(
-            "------ request start ------\n{}\n------ request end -----",
-            request
-        );
-    }
-    socket.write_all(&request.serialize())?;
-
-    socket.set_read_timeout(Some(Duration::from_secs(30)))?;
-
-    let mut socket_reader = BufReader::new(socket);
-
-    HttpResponse::receive_response(&mut socket_reader, config)
 }
 
 fn main() -> anyhow::Result<()> {
@@ -102,8 +69,8 @@ fn main() -> anyhow::Result<()> {
                     "Protocols other than HTTP are not yet implemented"
                 ));
             }
-            let socket = connection_cache.get_connection(&parsed_url, &config)?;
-            let result = fetch_url(&parsed_url, socket, &config);
+            let conn = connection_cache.get_connection(&parsed_url, &config)?;
+            let result = conn.send_request(&parsed_url.path, &config);
             match result {
                 Ok(response) => {
                     if config.debug > 0 {

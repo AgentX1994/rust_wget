@@ -1,10 +1,10 @@
-use std::{collections::HashMap, io, net::TcpStream};
+use std::collections::HashMap;
 
-use crate::{url::ParsedUrl, Configuration};
+use crate::{connection::Connection, error::WgetResult, url::ParsedUrl, Configuration};
 
 #[derive(Debug, Default)]
 pub struct ConnectionCache {
-    connections: HashMap<(String, u16), TcpStream>,
+    connections: HashMap<(String, u16), Connection>,
 }
 
 impl ConnectionCache {
@@ -12,7 +12,7 @@ impl ConnectionCache {
         &mut self,
         url: &ParsedUrl,
         config: &Configuration,
-    ) -> io::Result<&mut TcpStream> {
+    ) -> WgetResult<&mut Connection> {
         match self.connections.entry((url.domain_name.clone(), url.port)) {
             std::collections::hash_map::Entry::Occupied(o) => {
                 if config.debug > 1 {
@@ -24,11 +24,8 @@ impl ConnectionCache {
                 Ok(o.into_mut())
             }
             std::collections::hash_map::Entry::Vacant(v) => {
-                if config.debug > 1 {
-                    println!("Connecting to {} port {}", url.domain_name, url.port);
-                }
-                let socket = TcpStream::connect((url.domain_name.as_str(), url.port))?;
-                Ok(v.insert(socket))
+                let conn = Connection::new(url.domain_name.to_string(), url.port, config)?;
+                Ok(v.insert(conn))
             }
         }
     }
@@ -130,7 +127,7 @@ mod tests {
                 .expect("Could not connect!");
             #[cfg(not(target_os = "windows"))]
             {
-                conn.as_raw_fd()
+                conn.get_socket().as_raw_fd()
             }
             #[cfg(target_os = "windows")]
             {
@@ -151,7 +148,7 @@ mod tests {
                 .expect("Could not connect!");
             #[cfg(not(target_os = "windows"))]
             {
-                conn.as_raw_fd()
+                conn.get_socket().as_raw_fd()
             }
             #[cfg(target_os = "windows")]
             {
@@ -184,7 +181,7 @@ mod tests {
                 .expect("Could not connect!");
             #[cfg(not(target_os = "windows"))]
             {
-                conn.as_raw_fd()
+                conn.get_socket().as_raw_fd()
             }
             #[cfg(target_os = "windows")]
             {
@@ -205,7 +202,7 @@ mod tests {
                 .expect("Could not connect!");
             #[cfg(not(target_os = "windows"))]
             {
-                conn.as_raw_fd()
+                conn.get_socket().as_raw_fd()
             }
             #[cfg(target_os = "windows")]
             {
