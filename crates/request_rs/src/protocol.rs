@@ -28,7 +28,7 @@ impl FromStr for Protocol {
             "http" => Ok(Protocol::Http),
             "https" => Ok(Protocol::Https),
             "ftp" => Ok(Protocol::Ftp),
-            _ => Err(WgetError::ParsingError(format!("Unknown protocol: {}", s))),
+            _ => Err(WgetError::ParsingError(format!("Unknown protocol: {s}"))),
         }
     }
 }

@@ -20,7 +20,7 @@ pub struct Connection {
 impl Connection {
     pub fn new(domain: String, port: u16, config: &Configuration) -> WgetResult<Self> {
         if config.debug > 1 {
-            println!("Connecting to {} port {}", domain, port);
+            println!("Connecting to {domain} port {port}");
         }
         let socket = TcpStream::connect((&domain[..], port))?;
         socket.set_read_timeout(Some(Duration::from_secs(30)))?;
@@ -41,8 +41,7 @@ impl Connection {
 
         if config.debug > 0 {
             println!(
-                "------ request start ------\n{}\n------ request end -----",
-                request
+                "------ request start ------\n{request}\n------ request end -----"
             );
         }
         self.socket.write_all(&request.serialize())?;
@@ -154,7 +153,7 @@ mod tests {
                 request.add_header(key.trim(), value[1..].trim());
             }
 
-            println!("{}", request);
+            println!("{request}");
 
             assert_eq!(request.get_header("Host"), Some("localhost"));
             assert_eq!(request.get_header("User-Agent"), Some("Wget/1.21.3"));

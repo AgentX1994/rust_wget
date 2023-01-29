@@ -32,7 +32,7 @@ struct Options {
 fn main() -> anyhow::Result<()> {
     let options = Options::parse();
     if options.debug > 0 {
-        println!("{:?}", options);
+        println!("{options:?}");
     }
     let mut has_error = false;
     let config = Configuration {
@@ -48,7 +48,7 @@ fn main() -> anyhow::Result<()> {
                 Ok(Box::new(io::stdout()) as Box<dyn io::Write>)
             } else {
                 if config.debug > 0 {
-                    println!("Writing to {}", path);
+                    println!("Writing to {path}");
                 }
                 File::create(path).map(|f| Box::new(f) as Box<dyn io::Write>)
             }
@@ -62,7 +62,7 @@ fn main() -> anyhow::Result<()> {
         while !successful {
             let parsed_url = ParsedUrl::parse(&current_url, &config)?;
             if config.debug > 0 {
-                println!("{:?}", parsed_url);
+                println!("{parsed_url:?}");
             }
             if parsed_url.protocol != Protocol::Http {
                 return Err(anyhow::anyhow!(
@@ -75,8 +75,7 @@ fn main() -> anyhow::Result<()> {
                 Ok(response) => {
                     if config.debug > 0 {
                         println!(
-                            "------ response start ------\n{}\n------ response end -----",
-                            response
+                            "------ response start ------\n{response}\n------ response end -----"
                         );
                     }
                     match response.status_family() {
@@ -84,12 +83,12 @@ fn main() -> anyhow::Result<()> {
                             successful = true;
                             if let Some(output_file) = &mut output_file {
                                 if let Err(e) = output_file.write_all(response.get_data()) {
-                                    eprintln!("Could not write data to output file: {}", e);
+                                    eprintln!("Could not write data to output file: {e}");
                                 }
                             } else if let Err(e) =
                                 File::create(parsed_url.filename)?.write_all(response.get_data())
                             {
-                                eprintln!("Could not write data to output file: {}", e);
+                                eprintln!("Could not write data to output file: {e}");
                             }
                         }
                         HttpStatusFamily::Redirection => {
@@ -111,7 +110,7 @@ fn main() -> anyhow::Result<()> {
                             eprintln!("Received Informational response?");
                             let bytes = response.serialize();
                             let response_string = String::from_utf8_lossy(&bytes);
-                            println!("{}", response_string);
+                            println!("{response_string}");
                             has_error = true;
                             successful = true;
                         }
@@ -119,7 +118,7 @@ fn main() -> anyhow::Result<()> {
                             eprintln!("ServerError!");
                             let bytes = response.serialize();
                             let response_string = String::from_utf8_lossy(&bytes);
-                            println!("{}", response_string);
+                            println!("{response_string}");
                             has_error = true;
                             successful = true;
                         }
@@ -127,14 +126,14 @@ fn main() -> anyhow::Result<()> {
                             eprintln!("ServerError!");
                             let bytes = response.serialize();
                             let response_string = String::from_utf8_lossy(&bytes);
-                            println!("{}", response_string);
+                            println!("{response_string}");
                             has_error = true;
                             successful = true;
                         }
                     }
                 }
                 Err(e) => {
-                    eprintln!("{:?}", e);
+                    eprintln!("{e:?}");
                     has_error = true;
                     break;
                 }

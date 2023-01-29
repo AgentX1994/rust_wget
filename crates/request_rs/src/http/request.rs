@@ -1,8 +1,9 @@
-use std::{collections::HashMap, fmt};
+use std::fmt;
 
 use unicase::UniCase;
 
 use super::HttpVersion;
+use crate::http::headers::Headers;
 
 #[derive(Debug)]
 pub enum HttpMethod {
@@ -30,7 +31,7 @@ impl fmt::Display for HttpMethod {
             HttpMethod::Trace => "TRACE",
             HttpMethod::Patch => "PATCH",
         };
-        write!(f, "{}", method)
+        write!(f, "{method}")
     }
 }
 
@@ -39,7 +40,7 @@ pub struct HttpRequest {
     method: HttpMethod,
     path: String,
     version: HttpVersion,
-    headers: HashMap<UniCase<String>, String>,
+    headers: Headers,
 }
 
 impl HttpRequest {
@@ -48,7 +49,7 @@ impl HttpRequest {
             method,
             path: path.into(),
             version,
-            headers: HashMap::new(),
+            headers: Default::default(),
         }
     }
 
@@ -57,7 +58,7 @@ impl HttpRequest {
     }
 
     pub fn add_header<K: Into<String>, V: Into<String>>(&mut self, key: K, value: V) {
-        self.headers.insert(UniCase::new(key.into()), value.into());
+        self.headers.add(UniCase::new(key.into()), value.into());
     }
 
     pub fn get_header<K>(&self, key: &K) -> Option<&str>
@@ -67,7 +68,6 @@ impl HttpRequest {
     {
         self.headers
             .get(&UniCase::new(key.as_ref().to_string()))
-            .map(|v| &**v)
     }
 
     pub fn delete_header<K>(&mut self, key: &K) -> Option<String>
@@ -83,7 +83,7 @@ impl fmt::Display for HttpRequest {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{} {} {}\r\n", self.method, self.path, self.version)?;
         for (key, value) in &self.headers {
-            write!(f, "{}: {}\r\n", key, value)?;
+            write!(f, "{key}: {value}\r\n")?;
         }
         write!(f, "\r\n")
     }

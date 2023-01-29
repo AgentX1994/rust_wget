@@ -48,7 +48,7 @@ impl ParsedUrl {
                 (
                     domain_name.to_string(),
                     port_str.parse::<u16>().map_err(|_| {
-                        WgetError::ParsingError(format!("Invalid port {0}", port_str))
+                        WgetError::ParsingError(format!("Invalid port {port_str}"))
                     })?,
                 )
             } else {

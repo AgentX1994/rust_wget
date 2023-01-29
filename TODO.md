@@ -27,7 +27,8 @@ rust_wget TODOs
 - ~~Headers should be case-insensitive~~
     - ~~both on requests and responses~~
 - ~~Move Lib into separate crate?~~
-- Maybe allow ordering of HTTP headers?
+- ~~Maybe allow ordering of HTTP headers?~~
+- Handle concatenation behavior of certain headers
 - Integration tests
 - Docs and Doc tests
 - Make options closer to wget's

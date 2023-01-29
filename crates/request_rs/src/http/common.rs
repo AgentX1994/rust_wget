@@ -21,8 +21,7 @@ impl TryFrom<&str> for HttpVersion {
             "HTTP/1.1" => Ok(HttpVersion::Version1_1),
             "HTTP/2" => Ok(HttpVersion::Version2_0),
             _ => Err(WgetError::ParsingError(format!(
-                "Invalid Version {}",
-                value
+                "Invalid Version {value}"
             ))),
         }
     }
@@ -36,7 +35,7 @@ impl fmt::Display for HttpVersion {
             HttpVersion::Version1_1 => "HTTP/1.1".to_string(),
             HttpVersion::Version2_0 => "HTTP/2".to_string(),
         };
-        write!(f, "{}", version_str)
+        write!(f, "{version_str}")
     }
 }
 

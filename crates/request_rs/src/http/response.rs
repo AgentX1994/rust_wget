@@ -1,5 +1,4 @@
 use std::{
-    collections::HashMap,
     fmt,
     io::{self, BufRead},
     str::FromStr,
@@ -9,6 +8,7 @@ use unicase::UniCase;
 
 use crate::{
     error::{WgetError, WgetResult},
+    http::headers::Headers,
     Configuration,
 };
 
@@ -101,7 +101,7 @@ impl FromStr for HttpStatusCode {
     fn from_str(s: &str) -> WgetResult<Self> {
         let status_code = s
             .parse::<u16>()
-            .map_err(|_| WgetError::ParsingError(format!("Status Code not a number: {}", s)))?;
+            .map_err(|_| WgetError::ParsingError(format!("Status Code not a number: {s}")))?;
 
         status_code.try_into()
     }
@@ -196,7 +196,7 @@ pub struct HttpResponse {
     pub version: HttpVersion,
     pub status_code: HttpStatusCode,
     pub status_message: String,
-    headers: HashMap<UniCase<String>, String>,
+    headers: Headers,
     data: Vec<u8>,
 }
 
@@ -206,7 +206,7 @@ impl HttpResponse {
             version,
             status_code,
             status_message,
-            headers: HashMap::new(),
+            headers: Default::default(),
             data: Vec::new(),
         }
     }
@@ -216,7 +216,8 @@ impl HttpResponse {
     }
 
     pub fn add_header<K: Into<String>, V: Into<String>>(&mut self, key: K, value: V) {
-        self.headers.insert(UniCase::new(key.into()), value.into());
+        self.headers
+            .add(UniCase::new(key.into()), value.into());
     }
 
     pub fn set_data<D: Into<Vec<u8>>>(&mut self, data: D) {
@@ -228,9 +229,7 @@ impl HttpResponse {
         K: ?Sized,
         K: AsRef<str>,
     {
-        self.headers
-            .get(&UniCase::new(key.as_ref().to_string()))
-            .map(|s| &**s)
+        self.headers.get(key)
     }
 
     pub fn delete_header<K>(&mut self, key: &K) -> Option<String>
@@ -298,10 +297,10 @@ impl HttpResponse {
 
         if let Some(len_str) = response.get_header("Content-Length") {
             let length = len_str.parse::<usize>().map_err(|_| {
-                WgetError::ParsingError(format!("Invalid content length {}", len_str))
+                WgetError::ParsingError(format!("Invalid content length {len_str}"))
             })?;
             if config.debug > 1 {
-                println!("receiving normal file of length {}", length);
+                println!("receiving normal file of length {length}");
             }
             let mut buf = vec![0; length];
             socket.read_exact(&mut buf)?;
@@ -311,10 +310,10 @@ impl HttpResponse {
             loop {
                 let len_str = read_http_line(&mut socket)?;
                 if config.debug > 1 {
-                    println!("receiving chunk of length 0x{}", len_str);
+                    println!("receiving chunk of length 0x{len_str}");
                 }
                 let length: usize = usize::from_str_radix(&len_str, 16).map_err(|_| {
-                    WgetError::ParsingError(format!("Invalid chunk length {}", len_str))
+                    WgetError::ParsingError(format!("Invalid chunk length {len_str}"))
                 })?;
                 if length == 0 {
                     break;
@@ -347,7 +346,7 @@ impl fmt::Display for HttpResponse {
             self.version, self.status_code, self.status_message
         )?;
         for (key, value) in &self.headers {
-            write!(f, "{}: {}\r\n", key, value)?;
+            write!(f, "{key}: {value}\r\n")?;
         }
         write!(f, "{}\r\n\r\n", String::from_utf8_lossy(&self.data))
     }
